@@ -84,3 +84,7 @@ crashlytics-build.properties
 !*.dll
 !*.obj
 .vsconfig
+
+# Игнорируем только временные файлы сборки и локальный кэш Addressables
+**/AddressableAssetsData/*_Data/
+**/AddressableAssetsData/AssetGroups/Schemas/Temporary/

@@ -2,6 +2,7 @@
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.EventSystems;
+using UnityEngine.Localization;
 using UnityEngine.UI;
 
 [RequireComponent(typeof(Image))]
@@ -12,8 +13,8 @@ public class SpriteButton : MonoBehaviour,
     IPointerDownHandler,
     IPointerUpHandler
 {
-    [Header("Data")]
-    [SerializeField] private ButtonVisualData visualData;
+    [Header("Data")]   
+    [SerializeField] private ButtonVisualData visualData_current;
 
     [Header("Events")]
     [SerializeField] private UnityEvent onClick;
@@ -23,11 +24,25 @@ public class SpriteButton : MonoBehaviour,
     private Coroutine transitionRoutine;
     private bool isPointerInside;
     private bool isPointerDown;
+   
+    [SerializeField] private LocalizedAsset<ButtonVisualData> localizedAsset;
+
+    private void OnEnable()
+    {
+        // Подписываемся на событие смены языка
+        localizedAsset.AssetChanged += UpdateVisualData;
+    }
+
+    private void OnDisable()
+    {
+        localizedAsset.AssetChanged -= UpdateVisualData;
+    }
 
     private void Awake()
     {
         image = GetComponent<Image>();
-        image.sprite = visualData.NormalSprite;
+
+        image.sprite = visualData_current.NormalSprite;
     }
 
     // Переходы состояний 
@@ -42,22 +57,28 @@ public class SpriteButton : MonoBehaviour,
         if (transitionRoutine != null)
             StopCoroutine(transitionRoutine);
 
-        if (visualData.TransitionDuration <= 0f)
+        if (visualData_current.TransitionDuration <= 0f)
         {
             image.sprite = _targetSprite;
         }
         else
         {
-            transitionRoutine = StartCoroutine(CrossfadeSprite(_targetSprite, visualData.TransitionDuration));
+            transitionRoutine = StartCoroutine(CrossfadeSprite(_targetSprite, visualData_current.TransitionDuration));
         }
     }
 
     private Sprite GetSpriteForState(ButtonState _state) => _state switch
     {
-        ButtonState.Normal => visualData.NormalSprite,
-        ButtonState.Highlighted => visualData.HighlightedSprite,
-        ButtonState.Pressed => visualData.PressedSprite,
-        _ => visualData.NormalSprite,
+        ButtonState.Normal => visualData_current.NormalSprite,
+        ButtonState.Highlighted => visualData_current.HighlightedSprite,
+        ButtonState.Pressed => visualData_current.PressedSprite,
+
+
+
+
+
+
+        _ => visualData_current.NormalSprite,
     };
 
     // Плавный переход
@@ -105,6 +126,14 @@ public class SpriteButton : MonoBehaviour,
         {
             SetState(ButtonState.Normal);
         }
+    }
+
+    private void UpdateVisualData(ButtonVisualData _localizedValue)
+    {
+        if (_localizedValue == null) return;
+
+        visualData_current = _localizedValue;
+        image.sprite = visualData_current.NormalSprite;
     }
 
     // Обработка ввода

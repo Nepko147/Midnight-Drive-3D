@@ -1,0 +1,58 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b11a58205ec3474ca216360e9fa74a8, type: 3}
+  m_Name: UI_Sprite_Table Shared Data
+  m_EditorClassIdentifier: 
+  m_TableCollectionName: UI_Sprite_Table
+  m_TableCollectionNameGuidString: 2e1d49481802277428c29aebdaa02806
+  m_Entries:
+  - m_Id: 475089571840
+    m_Key: key_flag_sprite
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1989132652544
+    m_Key: key_play_button
+    m_Metadata:
+      m_Items: []
+  m_Metadata:
+    m_Items:
+    - rid: 777541202748375310
+    - rid: 777541225496445010
+  m_KeyGenerator:
+    rid: 777541202748375309
+  references:
+    version: 2
+    RefIds:
+    - rid: 777541202748375309
+      type: {class: DistributedUIDGenerator, ns: UnityEngine.Localization.Tables, asm: Unity.Localization}
+      data:
+        m_CustomEpoch: 1790670864765
+    - rid: 777541202748375310
+      type: {class: AssetTypeMetadata, ns: UnityEngine.Localization.Metadata, asm: Unity.Localization}
+      data:
+        m_Entries:
+        - m_KeyId: 475089571840
+          m_TableCodes:
+          - en
+          - ru
+        m_TypeString: UnityEngine.Texture2D, UnityEngine.CoreModule, Version=0.0.0.0,
+          Culture=neutral, PublicKeyToken=null
+    - rid: 777541225496445010
+      type: {class: AssetTypeMetadata, ns: UnityEngine.Localization.Metadata, asm: Unity.Localization}
+      data:
+        m_Entries:
+        - m_KeyId: 1989132652544
+          m_TableCodes:
+          - en
+          - ru
+        m_TypeString: ButtonVisualData, Assembly-CSharp, Version=0.0.0.0, Culture=neutral,
+          PublicKeyToken=null
