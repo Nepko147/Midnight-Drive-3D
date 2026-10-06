@@ -7,18 +7,17 @@ using UnityEngine.UI;
 
 [RequireComponent(typeof(Image))]
 
-public class SpriteButton : MonoBehaviour,
+public abstract class SpriteButton : MonoBehaviour,
     IPointerEnterHandler,
     IPointerExitHandler,
     IPointerDownHandler,
     IPointerUpHandler
 {
     [Header("Data")]   
-    [SerializeField] private ButtonVisualData visualData_current;
+    private ButtonVisualData visualData_current;
 
-    [Header("Events")]
-    [SerializeField] private UnityEvent onClick;
-
+    private UnityEvent onClick;
+    private RectTransform rectTransform;
     private Image image;
     private ButtonState state = ButtonState.Normal;
     private Coroutine transitionRoutine;
@@ -41,8 +40,10 @@ public class SpriteButton : MonoBehaviour,
     private void Awake()
     {
         image = GetComponent<Image>();
+        rectTransform = GetComponent<RectTransform>();
 
-        image.sprite = visualData_current.NormalSprite;
+        var _button = GetComponent<Button>();
+        onClick = _button.onClick;
     }
 
     // Переходы состояний 
@@ -72,12 +73,6 @@ public class SpriteButton : MonoBehaviour,
         ButtonState.Normal => visualData_current.NormalSprite,
         ButtonState.Highlighted => visualData_current.HighlightedSprite,
         ButtonState.Pressed => visualData_current.PressedSprite,
-
-
-
-
-
-
         _ => visualData_current.NormalSprite,
     };
 
@@ -133,7 +128,14 @@ public class SpriteButton : MonoBehaviour,
         if (_localizedValue == null) return;
 
         visualData_current = _localizedValue;
-        image.sprite = visualData_current.NormalSprite;
+
+        var _newSprite = visualData_current.NormalSprite;
+        image.sprite = _newSprite;
+
+        var _newSizeDelata_width = _newSprite.rect.width;
+        var _newSizeDelata_height = _newSprite.rect.height;
+        var _newSizeDelata = new Vector2(_newSizeDelata_width, _newSizeDelata_height);
+        rectTransform.sizeDelta = _newSizeDelata;
     }
 
     // Обработка ввода
@@ -160,9 +162,16 @@ public class SpriteButton : MonoBehaviour,
         isPointerDown = false;
 
         // Клик засчитывается, если курсор всё ещё над кнопкой
-        if (isPointerInside)
+        if (isPointerInside) 
+        {
             onClick?.Invoke();
+        }            
 
         RecalculateState();
+    }
+
+    public virtual void OnClick()
+    {
+        
     }
 }

@@ -15,8 +15,26 @@ MonoBehaviour:
   m_GroupName: Localization-Assets-Russian (Russia) (ru)
   m_GUID: 0db0d510936edaa4886c38022aef8163
   m_SerializeEntries:
+  - m_GUID: 06ab517c7ab798146a17df8732abc2c7
+    m_Address: ru
+    m_ReadOnly: 1
+    m_SerializedLabels:
+    - Locale-ru
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 2ab5ee1e2fb62894086ebba318825d2b
     m_Address: ru_button_Play 1
+    m_ReadOnly: 1
+    m_SerializedLabels:
+    - Locale-ru
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: a4e905fb2591ed648b75db5a24caf071
+    m_Address: ru
+    m_ReadOnly: 1
+    m_SerializedLabels:
+    - Locale-ru
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: afabf9c19c2ed7944b26fba1800ed3e0
+    m_Address: ru
     m_ReadOnly: 1
     m_SerializedLabels:
     - Locale-ru

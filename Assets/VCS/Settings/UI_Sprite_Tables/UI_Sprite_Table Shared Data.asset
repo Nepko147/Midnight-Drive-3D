@@ -20,7 +20,19 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 1989132652544
-    m_Key: key_play_button
+    m_Key: key_button_play
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2540616786087936
+    m_Key: key_button_upgrades
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2540703754981376
+    m_Key: key_button_settings
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2540877835374592
+    m_Key: key_button_quit
     m_Metadata:
       m_Items: []
   m_Metadata:
@@ -51,6 +63,18 @@ MonoBehaviour:
       data:
         m_Entries:
         - m_KeyId: 1989132652544
+          m_TableCodes:
+          - en
+          - ru
+        - m_KeyId: 2540616786087936
+          m_TableCodes:
+          - en
+          - ru
+        - m_KeyId: 2540703754981376
+          m_TableCodes:
+          - en
+          - ru
+        - m_KeyId: 2540877835374592
           m_TableCodes:
           - en
           - ru

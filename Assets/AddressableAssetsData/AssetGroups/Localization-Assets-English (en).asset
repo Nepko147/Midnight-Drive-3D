@@ -15,6 +15,24 @@ MonoBehaviour:
   m_GroupName: Localization-Assets-English (en)
   m_GUID: 8149d47b302606a47bf0a93650ee416a
   m_SerializeEntries:
+  - m_GUID: 30804b7c10b257c40a479e8a0580f2ad
+    m_Address: en
+    m_ReadOnly: 1
+    m_SerializedLabels:
+    - Locale-en
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: c14a2bf178221514b8de91d597034637
+    m_Address: en
+    m_ReadOnly: 1
+    m_SerializedLabels:
+    - Locale-en
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: d9d14821fc3a4314a931da8932673d0b
+    m_Address: en
+    m_ReadOnly: 1
+    m_SerializedLabels:
+    - Locale-en
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: ecdbed23a3f7b534b8d399934ec5ad5a
     m_Address: Button_Language_English_Strip3
     m_ReadOnly: 1
