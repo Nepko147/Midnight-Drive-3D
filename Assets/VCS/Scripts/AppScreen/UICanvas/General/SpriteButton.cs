@@ -142,6 +142,7 @@ public abstract class SpriteButton : MonoBehaviour,
     public void OnPointerEnter(PointerEventData _eventData)
     {
         isPointerInside = true;
+        AudioManager.SingleOnScene.PlaySFX("Button"); //Временно через строку, пока не определимся с системой хранения звуков
         RecalculateState();
     }
 
@@ -154,6 +155,7 @@ public abstract class SpriteButton : MonoBehaviour,
     public void OnPointerDown(PointerEventData _eventData)
     {
         isPointerDown = true;
+        AudioManager.SingleOnScene.PlaySFX("Button"); //Временно через строку, пока не определимся с системой хранения звуков
         RecalculateState();
     }
 

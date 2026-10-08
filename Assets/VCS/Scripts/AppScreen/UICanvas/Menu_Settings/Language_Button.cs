@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-public class LanguageConfigButton : MonoBehaviour
+public class Language_Button : MonoBehaviour
 {
     [SerializeField] private LanguageConfig config;
     [SerializeField] private LocalizationManager localizationManager;
