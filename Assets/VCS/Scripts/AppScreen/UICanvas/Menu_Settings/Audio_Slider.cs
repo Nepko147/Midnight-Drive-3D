@@ -1,88 +1,68 @@
+using System;
 using UnityEngine;
 using UnityEngine.UI;
-using UnityEngine.Audio;
+using UnityEngine.EventSystems;
 
-public class Audio_Slider : MonoBehaviour
+public class Audio_Slider : MonoBehaviour, IPointerDownHandler, IDragHandler
 {
-    [Header("Audio Setup")]
-    [SerializeField] private AudioMixer audioMixer;
-    [SerializeField] private string audioMixer_exposedParamName; // Имя парамметра из микшера
-    [SerializeField] private string PlayerPreferenceKey; // Имя параметра для сохранения в PlayerPrefs
-
     [Header("UI Elements")]
+    [SerializeField] private Image image;
     [SerializeField] private Sprite[] spriteArray;
 
-    private Image image;
+    // Событие, на которое подпишется контроллер настроек
+    public event Action<float> OnValueChanged;
 
+    [Header("Linked Elements")]
+    [SerializeField] private Audio_Button linkedButton; // Ссылка на связанную кнопку
+    
     private RectTransform rectTransform;
-
     private float value;
-
-    private float VALUE_DEFAULT = 0.6f;
 
     public float Value
     {
-        get
-        {
-            return (value);
-        }
+        get => value;
+
         set
         {
-            this.value = value;
-
-            var _ind = (int)Mathf.Ceil((spriteArray.Length - 1) * value);
-            image.sprite = spriteArray[_ind];
+            this.value = Mathf.Clamp01(value); // Гарантируем, что значение будет в диапозоне от 0 до 1
+            UpdateVisuals();            
         }
-    }
-
-    public void OnClick()
-    {
-        var _parentCanvas = GetComponentInParent<Canvas>();
-        var _camera = _parentCanvas.worldCamera;
-
-        // Берем позицию мыши в пикселях экрана
-        Vector2 _screenMousePos = Input.mousePosition;
-
-        // Переводим её в локальное пространство БЕЗ явного указания камеры.
-        // Передача null в качестве камеры легитимна только если Canvas в режиме Overlay
-        // Иначе, надо "добыть" камеру
-        if (RectTransformUtility.ScreenPointToLocalPointInRectangle(rectTransform, _screenMousePos, _camera, out Vector2 localMousePos))
-        {
-            // Локальные границы кнопки
-            float localLeftEdge = rectTransform.rect.xMin + image.raycastPadding.x; // Левый край
-            float localRightEdge = rectTransform.rect.xMax - image.raycastPadding.z; // Правый край
-            float totalWidth = rectTransform.rect.width - (image.raycastPadding.x + image.raycastPadding.z);
-
-            // Вычисляем, где кликнули относительно левого края (от 0.0 до 1.0)
-            float normalizedX = (localMousePos.x - localLeftEdge) / totalWidth;
-            normalizedX = Mathf.Clamp01(normalizedX);
-
-            Value = normalizedX;
-
-            // Сохраняем состояние, чтобы настройки не слетали при перезапуске
-            PlayerPrefs.SetFloat(PlayerPreferenceKey, Value);
-            PlayerPrefs.Save();
-
-            ApplyMixerState();
-        }
-    }
-
-    private void ApplyMixerState()
-    {
-        var _mixerValue = Mathf.Lerp(-30f, 20f, Value);
-        audioMixer.SetFloat(audioMixer_exposedParamName, _mixerValue);
     }
     
     private void Awake()
-    {
-        image = GetComponent<Image>();
+    {        
+        if (image == null)
+        {
+            image = GetComponent<Image>();
+        }
+
         rectTransform = image.rectTransform;
     }
 
-    private void Start()
-    {
-        Value = PlayerPrefs.GetFloat(PlayerPreferenceKey, VALUE_DEFAULT);
+    public void OnPointerDown(PointerEventData _eventData) => HandleInput(_eventData);
+    public void OnDrag(PointerEventData _eventData) => HandleInput(_eventData);
 
-        ApplyMixerState();
+    private void HandleInput(PointerEventData _eventData)
+    {
+        if (RectTransformUtility.ScreenPointToLocalPointInRectangle(rectTransform, _eventData.position, _eventData.pressEventCamera, out Vector2 _localMousePos))
+        {
+            var _localLeftEdge = rectTransform.rect.xMin + image.raycastPadding.x;
+            var _totalWidth = rectTransform.rect.width - (image.raycastPadding.x + image.raycastPadding.z);
+
+            var _normalizedX = (_localMousePos.x - _localLeftEdge) / _totalWidth;
+            Value = Mathf.Clamp01(_normalizedX);
+            
+            // Оповещаем систему об изменении значения
+            OnValueChanged?.Invoke(Value);
+        }
+    }
+
+    private void UpdateVisuals()
+    {
+        if (spriteArray != null && spriteArray.Length > 0 && image != null)
+        {
+            int index = Mathf.Clamp((int)Mathf.Ceil((spriteArray.Length - 1) * value), 0, spriteArray.Length - 1);
+            image.sprite = spriteArray[index];
+        }
     }
 }

@@ -1,54 +1,47 @@
+using System;
 using UnityEngine;
 using UnityEngine.UI;
-using UnityEngine.Audio;
 
 public class Audio_Button : MonoBehaviour
 {
-    [Header("Audio Setup")]
-    [SerializeField] private AudioMixer audioMixer;
-    [SerializeField] private string audioMixer_exposedParamName; // Имя парамметра из микшера
-    [SerializeField] private string PlayerPreferenceKey; // Имя параметра для сохранения в PlayerPrefs
-
     [Header("UI Elements")]
-    [SerializeField] private Image buttonImage;
-    [SerializeField] private Sprite soundOnSprite;
-    [SerializeField] private Sprite soundOffSprite;
+    [SerializeField] private Image image;
+    [SerializeField] private Sprite muteSprite;
+    [SerializeField] private Sprite unmuteSprite;
 
-    private const float VOLUME_MUTE = -80f;  // -80 dB - полная тишина
-    private const float VOLUME_DEFAULT = 0f; // 0 dB - исходная громкость трека
+    [SerializeField] private Sprite[] spriteArray;
 
-    private bool isMuted = false;
+    private float value;
 
-    private void Start()
+    public float Value
     {
-        // Загружаем сохраненное состояние (0 = звук есть, 1 = выключен)
-        isMuted = PlayerPrefs.GetInt(PlayerPreferenceKey, 0) == 1;
+        get => value;
 
-        ApplyMuteState();
-    }
-
-    private void ApplyMuteState()
-    {
-        if (isMuted)
-        {            
-            audioMixer.SetFloat(audioMixer_exposedParamName, VOLUME_MUTE);
-            buttonImage.sprite = soundOffSprite;
-        }
-        else
-        {            
-            audioMixer.SetFloat(audioMixer_exposedParamName, VOLUME_DEFAULT);
-            buttonImage.sprite = soundOnSprite;
+        set
+        {
+            this.value = Mathf.Clamp01(value); // Гарантируем, что значение будет в диапозоне от 0 до 1
+            UpdateVisuals();
         }
     }
 
-    public void OnClick()
+    public event Action OnClicked;
+
+    public void OnClick() => OnClicked?.Invoke();
+
+    public void SetMuteVisual(bool _isMuted)
     {
-        isMuted = !isMuted;
+        if (image != null)
+        {
+            image.sprite = _isMuted ? muteSprite : unmuteSprite;
+        }
+    }
 
-        // Сохраняем состояние, чтобы настройки не слетали при перезапуске
-        PlayerPrefs.SetInt(PlayerPreferenceKey, isMuted ? 1 : 0);
-        PlayerPrefs.Save();
-
-        ApplyMuteState();
+    private void UpdateVisuals()
+    {
+        if (spriteArray != null && spriteArray.Length > 0 && image != null)
+        {
+            int index = Mathf.Clamp((int)Mathf.Ceil((spriteArray.Length - 1) * value), 0, spriteArray.Length - 1);
+            image.sprite = spriteArray[index];
+        }
     }
 }
