@@ -5,7 +5,7 @@ using UnityEngine.Localization.Settings;
 public class LocalizationManager : MonoBehaviour
 {
     private bool isChangingLanguage = false;
-        
+
     public void ChangeLanguage(int _localeId)
     {
         if (isChangingLanguage)
@@ -22,9 +22,11 @@ public class LocalizationManager : MonoBehaviour
                 
         yield return LocalizationSettings.InitializationOperation;
 
-        if (_localeId >= 0 && _localeId < LocalizationSettings.AvailableLocales.Locales.Count)
+        if (_localeId >= 0 
+            && _localeId < LocalizationSettings.AvailableLocales.Locales.Count)
         {
-            LocalizationSettings.SelectedLocale = LocalizationSettings.AvailableLocales.Locales[_localeId];
+            var _targetLocale = LocalizationSettings.AvailableLocales.Locales[_localeId];
+            LocalizationSettings.SelectedLocale = _targetLocale;
         }
 
         isChangingLanguage = false;

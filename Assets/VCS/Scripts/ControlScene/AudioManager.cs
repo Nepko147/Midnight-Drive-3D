@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using UnityEngine;
 using UnityEngine.Audio;
 
@@ -27,15 +28,7 @@ public class AudioManager : MonoBehaviour
     [SerializeField] private AudioMixerGroup musicGroup;
     [SerializeField] private AudioMixerGroup sfxGroup;
 
-    [Header("Audio Tracks")]
-    [SerializeField] private Sound[] musicSounds;
-    [SerializeField] private Sound[] sfxSounds;
-
-    private AudioSource musicSource;    
-
     private AudioSource sfxSource;
-    private const float SFXSOURCE_PITCH_MIN = 0.95f;
-    private const float SFXSOURCE_PITCH_MAX = 1.05f;
 
     private const float MIXER_MIN = -30f;
     private const float MIXER_MAX = 20f;
@@ -71,9 +64,12 @@ public class AudioManager : MonoBehaviour
 
     private void InitializeAudioSources()
     {
-        musicSource = gameObject.AddComponent<AudioSource>();
-        musicSource.outputAudioMixerGroup = musicGroup;
-        musicSource.loop = true;
+        // Создаем два источника для плавного перекрестного затухания
+        music_activeSource = gameObject.AddComponent<AudioSource>();
+        music_activeSource.outputAudioMixerGroup = musicGroup;
+
+        music_inactiveSource = gameObject.AddComponent<AudioSource>();
+        music_inactiveSource.outputAudioMixerGroup = musicGroup;
 
         sfxSource = gameObject.AddComponent<AudioSource>();
         sfxSource.outputAudioMixerGroup = sfxGroup;
@@ -147,48 +143,72 @@ public class AudioManager : MonoBehaviour
         PlayerPrefs.Save();
     }
 
-    public void PlayMusic(string _name)
-    {
-        var _sound = Array.Find(musicSounds, _s => _s.name == _name);
+    #region Music
 
-        if (_sound == null)
+    private AudioSource music_activeSource;
+    private AudioSource music_inactiveSource;
+    private Coroutine music_fadeRoutine;
+
+    public void Music_Play(MusicAsset _musicAsset, float _fadeDuration = 1.5f)
+    {
+        if (_musicAsset != null
+            && music_activeSource.clip != _musicAsset.Clip)
         {
-            Debug.LogWarning($"Музыка: {_name} не найдена!");
+            if (music_fadeRoutine != null)
+            {
+                StopCoroutine(music_fadeRoutine);
+            }
+
+            music_fadeRoutine = StartCoroutine(Music_CrossfadeRoutine(_musicAsset, _fadeDuration));
+        }
+    }
+
+    private IEnumerator Music_CrossfadeRoutine(MusicAsset _musicAsset, float _duration)
+    {
+        // Готовим второй источник
+        music_inactiveSource.clip = _musicAsset.Clip;
+        music_inactiveSource.loop = _musicAsset.Loop;
+        music_inactiveSource.volume = 0;
+        music_inactiveSource.Play();
+
+        float _elapsed = 0f;
+        float _targetVolume = _musicAsset.Volume;
+        float _startVolume = music_activeSource.volume;
+
+        while (_elapsed < _duration)
+        {
+            _elapsed += Time.unscaledDeltaTime;
+            float _t = _elapsed / _duration;
+
+            // Один трек становится тише, второй громче
+            music_activeSource.volume = Mathf.Lerp(_startVolume, 0f, _t);
+            music_inactiveSource.volume = Mathf.Lerp(0f, _targetVolume, _t);
+            yield return null;
+        }
+
+        music_activeSource.Stop();
+
+        // Меняем источники местами
+        var _temp = music_activeSource;
+        music_activeSource = music_inactiveSource;
+        music_inactiveSource = _temp;
+    }
+
+    public void Music_Pause() => music_activeSource.Pause();
+    
+    public void Music_UnPause() => music_activeSource.UnPause();
+
+    #endregion
+
+    public void SFX_Play(SFXAsset _audioXAsset)
+    {
+        if (_audioXAsset == null)
+        {
+            Debug.LogWarning($"AudioEvent не найден!");
             return;
         }
 
-        musicSource.clip = _sound.clip;
-        musicSource.Play();
-    }
-
-    public void PauseMusic()
-    {
-        musicSource.Pause();
-    }
-
-    public void UnPauseMusic()
-    {
-        musicSource.UnPause();
-    }
-
-    public void PlaySFX(string _name)
-    {
-        var _sound = Array.Find(sfxSounds, _s => _s.name == _name);
-
-        if (_sound == null)
-        {
-            Debug.LogWarning($"Звук: {_name} не найден!");
-            return;
-        }
-
-        sfxSource.pitch = UnityEngine.Random.Range(SFXSOURCE_PITCH_MIN, SFXSOURCE_PITCH_MAX);
-        sfxSource.PlayOneShot(_sound.clip);
-    }
-
-    [System.Serializable] // Попробовать перенести/превратить в ScriptableObject
-    public class Sound
-    {
-        public string name;
-        public AudioClip clip;
+        // ScriptableObject (AudioEvent) проигрывает сам себя через sfxSource менеджера
+        _audioXAsset.Play(sfxSource);
     }
 }

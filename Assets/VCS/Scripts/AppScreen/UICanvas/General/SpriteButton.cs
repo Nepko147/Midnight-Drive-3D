@@ -16,6 +16,10 @@ public abstract class SpriteButton : MonoBehaviour,
     [Header("Data")]   
     private ButtonVisualData visualData_current;
 
+    [Header("Audio")]
+    [SerializeField] private SFXAsset pointerEnterSound;
+    [SerializeField] private SFXAsset pointerDownSound;
+
     private UnityEvent onClick;
     private RectTransform rectTransform;
     private Image image;
@@ -142,7 +146,12 @@ public abstract class SpriteButton : MonoBehaviour,
     public void OnPointerEnter(PointerEventData _eventData)
     {
         isPointerInside = true;
-        AudioManager.SingleOnScene.PlaySFX("Button"); //Временно через строку, пока не определимся с системой хранения звуков
+
+        if (pointerEnterSound != null)
+        {
+            AudioManager.SingleOnScene.SFX_Play(pointerEnterSound);
+        }
+
         RecalculateState();
     }
 
@@ -155,7 +164,12 @@ public abstract class SpriteButton : MonoBehaviour,
     public void OnPointerDown(PointerEventData _eventData)
     {
         isPointerDown = true;
-        AudioManager.SingleOnScene.PlaySFX("Button"); //Временно через строку, пока не определимся с системой хранения звуков
+
+        if (pointerDownSound != null)
+        {
+            AudioManager.SingleOnScene.SFX_Play(pointerDownSound);
+        }
+
         RecalculateState();
     }
 
