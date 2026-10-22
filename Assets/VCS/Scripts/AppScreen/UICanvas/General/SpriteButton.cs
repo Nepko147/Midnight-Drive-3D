@@ -5,9 +5,14 @@ using UnityEngine.EventSystems;
 using UnityEngine.Localization;
 using UnityEngine.UI;
 
-[RequireComponent(typeof(Image))]
+// Паттерн MVP (Model-View-Presenter)
+// SpriteButton - это чистый View (представление).
+// Он отвечает только за отображение, анимацию и звуки нажатия
 
-public abstract class SpriteButton : MonoBehaviour,
+[RequireComponent(typeof(Image))]
+[RequireComponent(typeof(Button))]
+
+public class SpriteButton : MonoBehaviour,
     IPointerEnterHandler,
     IPointerExitHandler,
     IPointerDownHandler,
@@ -19,8 +24,7 @@ public abstract class SpriteButton : MonoBehaviour,
     [Header("Audio")]
     [SerializeField] private SFXAsset pointerEnterSound;
     [SerializeField] private SFXAsset pointerDownSound;
-
-    private UnityEvent onClick;
+    
     private RectTransform rectTransform;
     private Image image;
     private ButtonState state = ButtonState.Normal;
@@ -29,6 +33,28 @@ public abstract class SpriteButton : MonoBehaviour,
     private bool isPointerDown;
    
     [SerializeField] private LocalizedAsset<ButtonVisualData> localizedAsset;
+    
+    #region Event
+
+    private UnityEvent onClick;
+
+    public void AddListener(UnityAction _action)
+    {
+        // Инициализируем в Awake или проверяем на null, если подписка происходит раньше Awake
+        if (onClick == null)
+        {
+            onClick = GetComponent<Button>().onClick;
+        }
+
+        onClick.AddListener(_action);
+    }
+
+    public void RemoveListener(UnityAction _action)
+    {
+        onClick?.RemoveListener(_action);
+    }
+
+    #endregion
 
     private void OnEnable()
     {
@@ -184,10 +210,5 @@ public abstract class SpriteButton : MonoBehaviour,
         }            
 
         RecalculateState();
-    }
-
-    public virtual void OnClick()
-    {
-        
     }
 }
