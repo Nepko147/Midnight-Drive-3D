@@ -14,7 +14,7 @@ public class Language_Button : MonoBehaviour
     {
         if (config != null)
         {
-            localizationManager.ChangeLanguage(config.LocaleId);
+            localizationManager.ChangeLanguage(config.LocaleCode);
         }
     }
 }

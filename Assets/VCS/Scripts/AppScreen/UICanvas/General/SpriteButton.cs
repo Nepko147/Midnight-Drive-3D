@@ -1,13 +1,13 @@
-﻿using System.Collections;
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.EventSystems;
 using UnityEngine.Localization;
 using UnityEngine.UI;
+using DG.Tweening;
 
-// Паттерн MVP (Model-View-Presenter)
-// SpriteButton - это чистый View (представление).
-// Он отвечает только за отображение, анимацию и звуки нажатия
+            // Паттерн MVP (Model-View-Presenter)
+            // SpriteButton - это чистый View (представление).
+            // Он отвечает только за отображение, анимацию и звуки нажатия
 
 [RequireComponent(typeof(Image))]
 [RequireComponent(typeof(Button))]
@@ -28,7 +28,6 @@ public class SpriteButton : MonoBehaviour,
     private RectTransform rectTransform;
     private Image image;
     private ButtonState state = ButtonState.Normal;
-    private Coroutine transitionRoutine;
     private bool isPointerInside;
     private bool isPointerDown;
    
@@ -37,6 +36,7 @@ public class SpriteButton : MonoBehaviour,
     #region Event
 
     private UnityEvent onClick;
+    private Tween fadeTween;
 
     public void AddListener(UnityAction _action)
     {
@@ -49,125 +49,11 @@ public class SpriteButton : MonoBehaviour,
         onClick.AddListener(_action);
     }
 
-    public void RemoveListener(UnityAction _action)
-    {
-        onClick?.RemoveListener(_action);
-    }
+    public void RemoveListener(UnityAction _action) =>  onClick?.RemoveListener(_action);
 
     #endregion
 
-    private void OnEnable()
-    {
-        // Подписываемся на событие смены языка
-        localizedAsset.AssetChanged += UpdateVisualData;
-    }
-
-    private void OnDisable()
-    {
-        localizedAsset.AssetChanged -= UpdateVisualData;
-    }
-
-    private void Awake()
-    {
-        image = GetComponent<Image>();
-        rectTransform = GetComponent<RectTransform>();
-
-        var _button = GetComponent<Button>();
-        onClick = _button.onClick;
-    }
-
-    // Переходы состояний 
-    private void SetState(ButtonState _newState)
-    {
-        if (state == _newState)
-            return;
-
-        state = _newState;
-        Sprite _targetSprite = GetSpriteForState(_newState);
-
-        if (transitionRoutine != null)
-            StopCoroutine(transitionRoutine);
-
-        if (visualData_current.TransitionDuration <= 0f)
-        {
-            image.sprite = _targetSprite;
-        }
-        else
-        {
-            transitionRoutine = StartCoroutine(CrossfadeSprite(_targetSprite, visualData_current.TransitionDuration));
-        }
-    }
-
-    private Sprite GetSpriteForState(ButtonState _state) => _state switch
-    {
-        ButtonState.Normal => visualData_current.NormalSprite,
-        ButtonState.Highlighted => visualData_current.HighlightedSprite,
-        ButtonState.Pressed => visualData_current.PressedSprite,
-        _ => visualData_current.NormalSprite,
-    };
-
-    // Плавный переход
-    private IEnumerator CrossfadeSprite(Sprite _target, float _duration)
-    {
-        float _half = _duration * 0.5f;
-
-        // Fade out
-        yield return FadeAlpha(1f, 0f, _half);
-        image.sprite = _target;
-        // Fade in
-        yield return FadeAlpha(0f, 1f, _half);
-    }
-
-    private IEnumerator FadeAlpha(float _from, float _to, float _time)
-    {
-        float _elapsed = 0f;
-        Color _color = image.color;
-
-        while (_elapsed < _time)
-        {
-            _elapsed += Time.unscaledDeltaTime;
-            _color.a = Mathf.Lerp(_from, _to, _elapsed / _time);
-            image.color = _color;
-            yield return null;
-        }
-
-        _color.a = _to;
-        image.color = _color;
-    }
-
-    // RecalculateState: Единственннное место, где решается,
-    // какое состояние должно быть сейчас, а не разбросано по хэндлерам.
-    private void RecalculateState()
-    {
-        if (isPointerDown)
-        {
-            SetState(ButtonState.Pressed);
-        }
-        else if (isPointerInside)
-        {
-            SetState(ButtonState.Highlighted);
-        }
-        else
-        {
-            SetState(ButtonState.Normal);
-        }
-    }
-
-    private void UpdateVisualData(ButtonVisualData _localizedValue)
-    {
-        if (_localizedValue == null) return;
-
-        visualData_current = _localizedValue;
-
-        var _newSprite = visualData_current.NormalSprite;
-        image.sprite = _newSprite;
-
-        var _newSizeDelata_width = _newSprite.rect.width;
-        var _newSizeDelata_height = _newSprite.rect.height;
-        var _newSizeDelata = new Vector2(_newSizeDelata_width, _newSizeDelata_height);
-        rectTransform.sizeDelta = _newSizeDelata;
-    }
-
+    #region Input
     // Обработка ввода
     public void OnPointerEnter(PointerEventData _eventData)
     {
@@ -204,11 +90,98 @@ public class SpriteButton : MonoBehaviour,
         isPointerDown = false;
 
         // Клик засчитывается, если курсор всё ещё над кнопкой
-        if (isPointerInside) 
+        if (isPointerInside)
         {
             onClick?.Invoke();
-        }            
+        }
 
         RecalculateState();
+    }
+    #endregion
+
+    // Переходы состояний 
+    private void SetState(ButtonState _newState)
+    {
+        if (state != _newState)
+        {
+            state = _newState;
+            var _targetSprite = GetSpriteForState(_newState);
+
+            // Прерываем предыдущую анимацию, если она идёт
+            fadeTween?.Kill();
+
+            if (visualData_current.TransitionDuration <= 0f)
+            {
+                image.sprite = _targetSprite;
+                image.DOFade(1f, 0f);
+            }
+            else
+            {
+                var _halfDuratioon = visualData_current.TransitionDuration * 0.5f;
+                var _crossfadeSequence = DOTween.Sequence();
+                _crossfadeSequence.Append(image.DOFade(0f, _halfDuratioon).SetUpdate(true)) // Игнорируем Time.timeScale
+                             .AppendCallback(() => image.sprite = _targetSprite)
+                             .Append(image.DOFade(1f, _halfDuratioon).SetUpdate(true));
+
+                fadeTween = _crossfadeSequence;
+            }
+        }
+    }
+
+    // RecalculateState: Единственннное место, где решается,
+    // какое состояние должно быть сейчас, а не разбросано по хэндлерам.
+    private void RecalculateState()
+    {
+        if (isPointerDown)
+        {
+            SetState(ButtonState.Pressed);
+        }
+        else if (isPointerInside)
+        {
+            SetState(ButtonState.Highlighted);
+        }
+        else
+        {
+            SetState(ButtonState.Normal);
+        }
+    }
+
+    private Sprite GetSpriteForState(ButtonState _state) => _state switch
+    {
+        ButtonState.Normal => visualData_current.NormalSprite,
+        ButtonState.Highlighted => visualData_current.HighlightedSprite,
+        ButtonState.Pressed => visualData_current.PressedSprite,
+        _ => visualData_current.NormalSprite,
+    };
+
+    private void UpdateVisualData(ButtonVisualData _localizedValue)
+    {
+        if (_localizedValue == null) return;
+
+        visualData_current = _localizedValue;
+
+        var _newSprite = visualData_current.NormalSprite;
+        image.sprite = _newSprite;
+
+        rectTransform.sizeDelta = new Vector2(_newSprite.rect.width, _newSprite.rect.height);
+    }
+
+    private void OnEnable()
+    {
+        // Подписываемся на событие смены языка
+        localizedAsset.AssetChanged += UpdateVisualData;
+    }
+
+    private void OnDisable()
+    {
+        localizedAsset.AssetChanged -= UpdateVisualData;
+        fadeTween?.Kill();
+    }
+
+    private void Awake()
+    {
+        image = GetComponent<Image>();
+        rectTransform = GetComponent<RectTransform>();        
+        onClick = GetComponent<Button>().onClick;
     }
 }

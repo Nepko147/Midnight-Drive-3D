@@ -1,32 +1,37 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.Localization;
 using UnityEngine.Localization.Settings;
 
 public class LocalizationManager : MonoBehaviour
 {
     private bool isChangingLanguage = false;
 
-    public void ChangeLanguage(int _localeId)
+    public void ChangeLanguage(string _localeCode)
     {
         if (isChangingLanguage)
         {
             return;
         }
 
-        StartCoroutine(SetLocaleCoroutine(_localeId));
+        StartCoroutine(SetLocaleCoroutine(_localeCode));
     }
 
-    private IEnumerator SetLocaleCoroutine(int _localeId)
+    private IEnumerator SetLocaleCoroutine(string _localeCode)
     {
         isChangingLanguage = true;
                 
         yield return LocalizationSettings.InitializationOperation;
 
-        if (_localeId >= 0 
-            && _localeId < LocalizationSettings.AvailableLocales.Locales.Count)
+        var _targetLocale = LocalizationSettings.AvailableLocales.GetLocale(new LocaleIdentifier(_localeCode));
+
+        if(_targetLocale != null)
         {
-            var _targetLocale = LocalizationSettings.AvailableLocales.Locales[_localeId];
             LocalizationSettings.SelectedLocale = _targetLocale;
+        }
+        else
+        {
+            Debug.LogError($"[LocalizationManager] Локаль с кодом {_localeCode} не найдена!");
         }
 
         isChangingLanguage = false;

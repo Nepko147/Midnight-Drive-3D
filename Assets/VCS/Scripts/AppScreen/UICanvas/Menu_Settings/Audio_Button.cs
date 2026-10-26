@@ -40,8 +40,8 @@ public class Audio_Button : MonoBehaviour
     {
         if (spriteArray != null && spriteArray.Length > 0 && image != null)
         {
-            int index = Mathf.Clamp((int)Mathf.Ceil((spriteArray.Length - 1) * value), 0, spriteArray.Length - 1);
-            image.sprite = spriteArray[index];
+            var _index = Mathf.Clamp((int)Mathf.Ceil((spriteArray.Length - 1) * value), 0, spriteArray.Length - 1);
+            image.sprite = spriteArray[_index];
         }
     }
 }

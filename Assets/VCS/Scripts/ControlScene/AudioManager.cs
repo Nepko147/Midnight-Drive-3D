@@ -16,8 +16,8 @@ public class AudioManager : MonoBehaviour
         public string prefsMuteKey;
 
         [HideInInspector] public const float DEFAULT_VALUE = 0.6f;
-        [HideInInspector] public float currentVolume;
-        [HideInInspector] public bool isMuted;
+        public float CurrentVolume { get; set; }
+        public bool IsMuted { get; set; }
     }
 
     [Header("Audio Setup")]
@@ -86,8 +86,8 @@ public class AudioManager : MonoBehaviour
 
         if(_audioChannel != null)
         {
-            _audioChannel.currentVolume = _newValue;
-            _audioChannel.isMuted = _audioChannel.currentVolume <= MUTE_THRESHOLD;
+            _audioChannel.CurrentVolume = _newValue;
+            _audioChannel.IsMuted = _audioChannel.CurrentVolume <= MUTE_THRESHOLD;
 
             SaveSettings(_audioChannel);
             ApplyState(_audioChannel);
@@ -100,12 +100,12 @@ public class AudioManager : MonoBehaviour
 
         if (_audioChannel != null)
         {
-            _audioChannel.isMuted = !_audioChannel.isMuted;
+            _audioChannel.IsMuted = !_audioChannel.IsMuted;
 
-            if (!_audioChannel.isMuted
-                && _audioChannel.currentVolume <= MUTE_THRESHOLD)
+            if (!_audioChannel.IsMuted
+                && _audioChannel.CurrentVolume <= MUTE_THRESHOLD)
             {
-                _audioChannel.currentVolume = AudioChannelSettings.DEFAULT_VALUE;
+                _audioChannel.CurrentVolume = AudioChannelSettings.DEFAULT_VALUE;
             }
 
             SaveSettings(_audioChannel);
@@ -116,30 +116,30 @@ public class AudioManager : MonoBehaviour
     private void ApplyState(AudioChannelSettings _audioChannel)
     {
         // 1. Обновляем микшер
-        var _mixerVolume = _audioChannel.isMuted ? MIXER_OFF : Mathf.Lerp(MIXER_MIN, MIXER_MAX, _audioChannel.currentVolume);
+        var _mixerVolume = _audioChannel.IsMuted ? MIXER_OFF : Mathf.Lerp(MIXER_MIN, MIXER_MAX, _audioChannel.CurrentVolume);
         audioMixer.SetFloat(_audioChannel.mixerParamName, _mixerVolume);
 
         // Оповещаем все подписанные UI элементы
-        OnAudioSettingsChanged?.Invoke(_audioChannel.channelType, _audioChannel.currentVolume, _audioChannel.isMuted);
+        OnAudioSettingsChanged?.Invoke(_audioChannel.channelType, _audioChannel.CurrentVolume, _audioChannel.IsMuted);
     }
 
     private void LoadSettings()
     {
         foreach (var _audioChannel in audioChannels)
         {
-            _audioChannel.currentVolume = PlayerPrefs.GetFloat(_audioChannel.prefsVolumeKey, AudioChannelSettings.DEFAULT_VALUE);
-            _audioChannel.isMuted = PlayerPrefs.GetInt(_audioChannel.prefsMuteKey, 1) == 0;
+            _audioChannel.CurrentVolume = PlayerPrefs.GetFloat(_audioChannel.prefsVolumeKey, AudioChannelSettings.DEFAULT_VALUE);
+            _audioChannel.IsMuted = PlayerPrefs.GetInt(_audioChannel.prefsMuteKey, 1) == 0;
         }
     }
 
     private void SaveSettings(AudioChannelSettings _audioChannel)
     {
-        if (!_audioChannel.isMuted)
+        if (!_audioChannel.IsMuted)
         {
-            PlayerPrefs.SetFloat(_audioChannel.prefsVolumeKey, _audioChannel.currentVolume);
+            PlayerPrefs.SetFloat(_audioChannel.prefsVolumeKey, _audioChannel.CurrentVolume);
         }
 
-        PlayerPrefs.SetInt(_audioChannel.prefsMuteKey, _audioChannel.isMuted ? 0 : 1);
+        PlayerPrefs.SetInt(_audioChannel.prefsMuteKey, _audioChannel.IsMuted ? 0 : 1);
         PlayerPrefs.Save();
     }
 
