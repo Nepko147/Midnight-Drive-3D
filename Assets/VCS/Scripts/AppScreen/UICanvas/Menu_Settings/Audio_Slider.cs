@@ -5,17 +5,14 @@ using UnityEngine.EventSystems;
 
 public class Audio_Slider : MonoBehaviour, IPointerDownHandler, IDragHandler
 {
-    [Header("UI Elements")]
-    [SerializeField] private Image image;
-    [SerializeField] private Sprite[] spriteArray;
+    [Header("Visualizer Link")]
+    [SerializeField] private UI_FillSpriteVisualizer fillVisualizer;
 
     // Событие, на которое подпишется контроллер настроек
     public event Action<float> OnValueChanged;
-
-    [Header("Linked Elements")]
-    [SerializeField] private Audio_Button linkedButton; // Ссылка на связанную кнопку
     
     private RectTransform rectTransform;
+    private Image image;
     private float value;
 
     public float Value
@@ -25,17 +22,17 @@ public class Audio_Slider : MonoBehaviour, IPointerDownHandler, IDragHandler
         set
         {
             this.value = Mathf.Clamp01(value); // Гарантируем, что значение будет в диапозоне от 0 до 1
-            UpdateVisuals();            
+
+            if (fillVisualizer != null)
+            {
+                fillVisualizer.UpdateVisual(this.value);
+            }
         }
     }
     
     private void Awake()
-    {        
-        if (image == null)
-        {
-            image = GetComponent<Image>();
-        }
-
+    {  
+        image = GetComponent<Image>();
         rectTransform = image.rectTransform;
     }
 
@@ -54,15 +51,6 @@ public class Audio_Slider : MonoBehaviour, IPointerDownHandler, IDragHandler
             
             // Оповещаем систему об изменении значения
             OnValueChanged?.Invoke(Value);
-        }
-    }
-
-    private void UpdateVisuals()
-    {
-        if (spriteArray != null && spriteArray.Length > 0 && image != null)
-        {
-            int index = Mathf.Clamp((int)Mathf.Ceil((spriteArray.Length - 1) * value), 0, spriteArray.Length - 1);
-            image.sprite = spriteArray[index];
         }
     }
 }

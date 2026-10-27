@@ -13,18 +13,18 @@ public class Menu_Main : MonoBehaviour
 
     private void OnEnable()
     {   
-        playButton.AddListener(HandlePlayPressed);
-        upgradesButton.AddListener(HandleUpgradesPressed);
-        settingsButton.AddListener(HandleSettingsPressed);
-        quitButton.AddListener(HandleQuitPressed);
+        playButton.OnClick.AddListener(HandlePlayPressed);
+        upgradesButton.OnClick.AddListener(HandleUpgradesPressed);
+        settingsButton.OnClick.AddListener(HandleSettingsPressed);
+        quitButton.OnClick.AddListener(HandleQuitPressed);
     }
 
     private void OnDisable()
     {
-        playButton.RemoveListener(HandlePlayPressed);
-        upgradesButton.RemoveListener(HandleUpgradesPressed);
-        settingsButton.RemoveListener(HandleSettingsPressed);
-        quitButton.RemoveListener(HandleQuitPressed);
+        playButton.OnClick.RemoveListener(HandlePlayPressed);
+        upgradesButton.OnClick.RemoveListener(HandleUpgradesPressed);
+        settingsButton.OnClick.RemoveListener(HandleSettingsPressed);
+        quitButton.OnClick.RemoveListener(HandleQuitPressed);
     }
 
     // В MVP подобные классы выступают в роли Контроллера.
@@ -49,6 +49,7 @@ public class Menu_Main : MonoBehaviour
 
     private void HandleQuitPressed()
     {
+        // Логика перед закрытием игры (если надо)
         Application.Quit();
     }
 }

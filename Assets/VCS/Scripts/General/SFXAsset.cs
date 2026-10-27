@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.Audio;
 
 [CreateAssetMenu(fileName = "NewSFXAsset", menuName = "Audio/SFX Asset")]
 public class SFXAsset : ScriptableObject
@@ -25,12 +24,15 @@ public class SFXAsset : ScriptableObject
             return;
         }
 
+        // Останавливаем источник на случай, если он переиспользуется
+        _source.Stop();
+
         // Выбираем случайный клип, если их несколько
         // Например, если это шаги или удары
         _source.clip = clips[Random.Range(0, clips.Length)];
         _source.volume = volume;
         _source.pitch = Random.Range(pitchMin, pitchMax);
 
-        _source.PlayOneShot(_source.clip);
+        _source.Play();
     }
 }

@@ -5,9 +5,9 @@ using UnityEngine.Localization;
 using UnityEngine.UI;
 using DG.Tweening;
 
-            // Паттерн MVP (Model-View-Presenter)
-            // SpriteButton - это чистый View (представление).
-            // Он отвечает только за отображение, анимацию и звуки нажатия
+// Паттерн MVP (Model-View-Presenter)
+// SpriteButton - это чистый View (представление).
+// Он отвечает только за отображение, анимацию и звуки нажатия
 
 [RequireComponent(typeof(Image))]
 [RequireComponent(typeof(Button))]
@@ -27,6 +27,7 @@ public class SpriteButton : MonoBehaviour,
     
     private RectTransform rectTransform;
     private Image image;
+    private Button targetButton;
     private ButtonState state = ButtonState.Normal;
     private bool isPointerInside;
     private bool isPointerDown;
@@ -36,6 +37,23 @@ public class SpriteButton : MonoBehaviour,
     #region Event
 
     private UnityEvent onClick;
+
+    // OnClick - Публичное свойство для презентера.
+    // На случай, если метод OnEnable в презентере вызовется раньше Awake. 
+    // Это свойство гарантированно найдет компонент и вернет его ивент без ошибок.
+    public Button.ButtonClickedEvent OnClick
+    {
+        get
+        {
+            if (targetButton == null)
+            {
+                targetButton = GetComponent<Button>();
+            }
+
+            return targetButton.onClick;
+        }
+    }
+
     private Tween fadeTween;
 
     public void AddListener(UnityAction _action)
@@ -128,7 +146,7 @@ public class SpriteButton : MonoBehaviour,
         }
     }
 
-    // RecalculateState: Единственннное место, где решается,
+    // RecalculateState - это единственннное место, где решается,
     // какое состояние должно быть сейчас, а не разбросано по хэндлерам.
     private void RecalculateState()
     {
@@ -156,14 +174,18 @@ public class SpriteButton : MonoBehaviour,
 
     private void UpdateVisualData(ButtonVisualData _localizedValue)
     {
-        if (_localizedValue == null) return;
+        if (_localizedValue != null)
+        {
+            visualData_current = _localizedValue;
 
-        visualData_current = _localizedValue;
+            var _newSprite = visualData_current.NormalSprite;
+            image.sprite = _newSprite;
 
-        var _newSprite = visualData_current.NormalSprite;
-        image.sprite = _newSprite;
-
-        rectTransform.sizeDelta = new Vector2(_newSprite.rect.width, _newSprite.rect.height);
+            if (_newSprite != null)
+            {
+                rectTransform.sizeDelta = new Vector2(_newSprite.rect.width, _newSprite.rect.height);
+            }
+        }
     }
 
     private void OnEnable()
@@ -181,7 +203,11 @@ public class SpriteButton : MonoBehaviour,
     private void Awake()
     {
         image = GetComponent<Image>();
-        rectTransform = GetComponent<RectTransform>();        
-        onClick = GetComponent<Button>().onClick;
+        rectTransform = GetComponent<RectTransform>();  
+        
+        if (targetButton = null)
+        {
+            targetButton = GetComponent<Button>();
+        }
     }
 }

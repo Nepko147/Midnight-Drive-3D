@@ -7,9 +7,9 @@ public class Audio_Button : MonoBehaviour
     [Header("UI Elements")]
     [SerializeField] private Image image;
     [SerializeField] private Sprite muteSprite;
-    [SerializeField] private Sprite unmuteSprite;
 
-    [SerializeField] private Sprite[] spriteArray;
+    [Header("Visualizer Link (Optional)")]
+    [SerializeField] private UI_FillSpriteVisualizer fillVisualizer;
 
     private float value;
 
@@ -20,7 +20,11 @@ public class Audio_Button : MonoBehaviour
         set
         {
             this.value = Mathf.Clamp01(value); // √арантируем, что значение будет в диапозоне от 0 до 1
-            UpdateVisuals();
+            
+            if (fillVisualizer != null)
+            {
+                fillVisualizer.UpdateVisual(this.value);
+            }
         }
     }
 
@@ -30,18 +34,10 @@ public class Audio_Button : MonoBehaviour
 
     public void SetMuteVisual(bool _isMuted)
     {
-        if (image != null)
+        if (image != null
+            && _isMuted)
         {
-            image.sprite = _isMuted ? muteSprite : unmuteSprite;
-        }
-    }
-
-    private void UpdateVisuals()
-    {
-        if (spriteArray != null && spriteArray.Length > 0 && image != null)
-        {
-            var _index = Mathf.Clamp((int)Mathf.Ceil((spriteArray.Length - 1) * value), 0, spriteArray.Length - 1);
-            image.sprite = spriteArray[_index];
+            image.sprite =  muteSprite;
         }
     }
 }

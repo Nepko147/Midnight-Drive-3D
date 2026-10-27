@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Audio;
 
@@ -28,7 +29,16 @@ public class AudioManager : MonoBehaviour
     [SerializeField] private AudioMixerGroup musicGroup;
     [SerializeField] private AudioMixerGroup sfxGroup;
 
-    private AudioSource sfxSource;
+    // Если одновременно-проигрываемых звуков дофига, то они могут начать глючить
+    // Чтобы этого не произошло делаем Audio Pooling
+    [Header("Pool Settings")]
+    [Tooltip("Максимальное количество одновременно звучащих звуков. Не может быть меньше 1.")]
+    [SerializeField, Min(SFXPOOLSIZE_MIN)] private int sfxPoolSize = 5; // Сколько звуков может звучать одновременно
+
+    private const int SFXPOOLSIZE_MIN = 1;
+
+    private List<AudioSource> sfxPool;
+    private int nextPoolIndex = 0; // Счётчик для циклического переиспользования источников
 
     private const float MIXER_MIN = -30f;
     private const float MIXER_MAX = 20f;
@@ -44,7 +54,8 @@ public class AudioManager : MonoBehaviour
         {
             SingleOnScene = this;
             DontDestroyOnLoad(gameObject);
-            InitializeAudioSources();
+            InitializeSFXPool(); // Инициализируем пул вместо одного источника
+            InitializeMusicSources(); // Инициализируем 1 источник (В текущем проекте пул не нужен)
             LoadSettings();
         }
         else
@@ -62,7 +73,51 @@ public class AudioManager : MonoBehaviour
         }
     }
 
-    private void InitializeAudioSources()
+    private void InitializeSFXPool()
+    {
+        sfxPool = new List<AudioSource>();
+
+        if (sfxPoolSize < SFXPOOLSIZE_MIN)
+        {
+            Debug.LogError($"[AudioManager] CRITICAL ERROR: sfxPoolSize is less than {SFXPOOLSIZE_MIN}! Pool size fallback to the minimum allowed value: {SFXPOOLSIZE_MIN}");
+            sfxPoolSize = SFXPOOLSIZE_MIN;
+        }
+
+        for (int _i = 0; _i < sfxPoolSize; _i++)
+        {
+            // Создаем дочерний объект для каждого источника в пуле
+            GameObject _poolObject = new GameObject($"SFX_Source_{_i}");
+            _poolObject.transform.SetParent(transform);
+
+            AudioSource _source = _poolObject.AddComponent<AudioSource>();
+            _source.outputAudioMixerGroup = sfxGroup;
+            _source.playOnAwake = false;
+
+            sfxPool.Add(_source);
+        }
+    }
+
+    private AudioSource GetAvailableSFXSource()
+    {
+        // Пытаемся найти источник, который сейчас НИЧЕГО не играет
+        for (int _i = 0; _i < sfxPool.Count; _i++)
+        {
+            if (!sfxPool[_i].isPlaying)
+            {
+                return sfxPool[_i];
+            }
+        }
+
+        // Если все источники заняты (переполнение), берём источник по круговому индексу.
+        AudioSource _oldestSource = sfxPool[nextPoolIndex];
+
+        // Сдвигаем индекс на следующий элемент (если дошли до конца — сбрасываем в 0)
+        nextPoolIndex = (nextPoolIndex + 1) % sfxPoolSize; // Метод "Кольцевой буфер"
+
+        return _oldestSource;
+    }
+
+    private void InitializeMusicSources()
     {
         // Создаем два источника для плавного перекрестного затухания
         music_activeSource = gameObject.AddComponent<AudioSource>();
@@ -70,9 +125,6 @@ public class AudioManager : MonoBehaviour
 
         music_inactiveSource = gameObject.AddComponent<AudioSource>();
         music_inactiveSource.outputAudioMixerGroup = musicGroup;
-
-        sfxSource = gameObject.AddComponent<AudioSource>();
-        sfxSource.outputAudioMixerGroup = sfxGroup;
     }
 
     public AudioChannelSettings GetChannel(AudioChannelType _type)
@@ -208,7 +260,10 @@ public class AudioManager : MonoBehaviour
             return;
         }
 
+        // Берем свободный источник из пула
+        AudioSource _freeSource = GetAvailableSFXSource();
+
         // ScriptableObject (AudioEvent) проигрывает сам себя через sfxSource менеджера
-        _audioXAsset.Play(sfxSource);
+        _audioXAsset.Play(_freeSource);
     }
 }
