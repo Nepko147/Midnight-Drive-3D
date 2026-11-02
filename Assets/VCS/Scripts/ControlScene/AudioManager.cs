@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Audio;
 
-public class AudioManager : MonoBehaviour
+public class AudioManager : MonoBehaviour, ISaveable
 {
     public static AudioManager SingleOnScene { get; private set; }
 
@@ -19,6 +19,21 @@ public class AudioManager : MonoBehaviour
         [HideInInspector] public const float DEFAULT_VALUE = 0.6f;
         public float CurrentVolume { get; set; }
         public bool IsMuted { get; set; }
+    }
+
+    [System.Serializable]
+    public class AudioSaveData
+    {
+        // Будем хранить настройки каждого канала в виде отдельного элемента списка
+        public List<ChannelSaveEntry> channels = new();
+    }
+
+    [System.Serializable]
+    public class ChannelSaveEntry
+    {
+        public string channelKey; // Сюда запишем уникальный prefsVolumeKey или prefsMuteKey
+        public float volume;
+        public bool isMuted;
     }
 
     [Header("Audio Setup")]
@@ -47,6 +62,10 @@ public class AudioManager : MonoBehaviour
 
     // Передаем ТИП канала, громкость и статус Mute
     public event Action<AudioChannelType, float, bool> OnAudioSettingsChanged;
+    
+    private const string AUDIO_SAVE_KEY = "audio_settings";
+
+    public string SaveKey => AUDIO_SAVE_KEY;
 
     private void Awake()
     {
@@ -54,9 +73,11 @@ public class AudioManager : MonoBehaviour
         {
             SingleOnScene = this;
             DontDestroyOnLoad(gameObject);
+
             InitializeSFXPool(); // Инициализируем пул вместо одного источника
             InitializeMusicSources(); // Инициализируем 1 источник (В текущем проекте пул не нужен)
-            LoadSettings();
+
+            SaveManager.SingleOnScene.Register(this);
         }
         else
         {
@@ -73,64 +94,80 @@ public class AudioManager : MonoBehaviour
         }
     }
 
-    private void InitializeSFXPool()
+    private void OnDestroy()
     {
-        sfxPool = new List<AudioSource>();
-
-        if (sfxPoolSize < SFXPOOLSIZE_MIN)
+        if (SingleOnScene != null && SingleOnScene == SaveManager.SingleOnScene)
         {
-            Debug.LogError($"[AudioManager] CRITICAL ERROR: sfxPoolSize is less than {SFXPOOLSIZE_MIN}! Pool size fallback to the minimum allowed value: {SFXPOOLSIZE_MIN}");
-            sfxPoolSize = SFXPOOLSIZE_MIN;
-        }
-
-        for (int _i = 0; _i < sfxPoolSize; _i++)
-        {
-            // Создаем дочерний объект для каждого источника в пуле
-            GameObject _poolObject = new GameObject($"SFX_Source_{_i}");
-            _poolObject.transform.SetParent(transform);
-
-            AudioSource _source = _poolObject.AddComponent<AudioSource>();
-            _source.outputAudioMixerGroup = sfxGroup;
-            _source.playOnAwake = false;
-
-            sfxPool.Add(_source);
+            SaveManager.SingleOnScene.Unregister(this);
         }
     }
 
-    private AudioSource GetAvailableSFXSource()
+    // Собираем данные для универсального сейва
+    public string CaptureState()
     {
-        // Пытаемся найти источник, который сейчас НИЧЕГО не играет
-        for (int _i = 0; _i < sfxPool.Count; _i++)
+        AudioSaveData _dataToSave = new AudioSaveData();
+
+        foreach (var _audiochannel in audioChannels)
         {
-            if (!sfxPool[_i].isPlaying)
+            _dataToSave.channels.Add(new ChannelSaveEntry
             {
-                return sfxPool[_i];
+                channelKey = _audiochannel.prefsVolumeKey,
+                volume = _audiochannel.CurrentVolume,
+                isMuted = _audiochannel.IsMuted
+            });
+        }
+
+        return JsonUtility.ToJson(_dataToSave, true); // Превращаем данные в строку прямо здесь
+    }
+
+    // Восстанавливаем данные из универсального сейва
+    public void RestoreState(string _stateJson)
+    {
+        AudioSaveData _savedData = JsonUtility.FromJson<AudioSaveData>(_stateJson);
+
+        if (_savedData != null)
+        {
+            foreach (var _audioChannel in audioChannels)
+            {
+                var _savedChannel = _savedData.channels.Find(c => c.channelKey == _audioChannel.prefsVolumeKey);
+
+                if (_savedChannel != null)
+                {
+                    _audioChannel.CurrentVolume = _savedChannel.volume;
+                    _audioChannel.IsMuted = _savedChannel.isMuted;
+                }
+                else
+                {
+                    _audioChannel.CurrentVolume = AudioChannelSettings.DEFAULT_VALUE;
+                    _audioChannel.IsMuted = false;
+                }
+
+                // Применяем настройки к микшеру сразу после загрузки
+                ApplyState(_audioChannel);
             }
         }
-
-        // Если все источники заняты (переполнение), берём источник по круговому индексу.
-        AudioSource _oldestSource = sfxPool[nextPoolIndex];
-
-        // Сдвигаем индекс на следующий элемент (если дошли до конца — сбрасываем в 0)
-        nextPoolIndex = (nextPoolIndex + 1) % sfxPoolSize; // Метод "Кольцевой буфер"
-
-        return _oldestSource;
     }
 
-    private void InitializeMusicSources()
+    public void SetDefaultState()
     {
-        // Создаем два источника для плавного перекрестного затухания
-        music_activeSource = gameObject.AddComponent<AudioSource>();
-        music_activeSource.outputAudioMixerGroup = musicGroup;
-
-        music_inactiveSource = gameObject.AddComponent<AudioSource>();
-        music_inactiveSource.outputAudioMixerGroup = musicGroup;
+        if (audioChannels != null && audioChannels.Length > 0)
+        {
+            foreach (var _audioChannel in audioChannels)
+            {
+                _audioChannel.CurrentVolume = AudioChannelSettings.DEFAULT_VALUE;
+                _audioChannel.IsMuted = false;
+                
+                ApplyState(_audioChannel);
+            }
+        }
     }
 
     public AudioChannelSettings GetChannel(AudioChannelType _type)
     {
         return Array.Find(audioChannels, _c => _c.channelType == _type);
     }
+
+    #region UI
 
     public void SetVolumeFromUI(AudioChannelType _type, float _newValue)
     {
@@ -140,9 +177,9 @@ public class AudioManager : MonoBehaviour
         {
             _audioChannel.CurrentVolume = _newValue;
             _audioChannel.IsMuted = _audioChannel.CurrentVolume <= MUTE_THRESHOLD;
-
-            SaveSettings(_audioChannel);
+            
             ApplyState(_audioChannel);
+            SaveManager.SingleOnScene.SaveGame();
         }
     }
 
@@ -159,9 +196,9 @@ public class AudioManager : MonoBehaviour
             {
                 _audioChannel.CurrentVolume = AudioChannelSettings.DEFAULT_VALUE;
             }
-
-            SaveSettings(_audioChannel);
+            
             ApplyState(_audioChannel);
+            SaveManager.SingleOnScene.SaveGame();
         }
     }
 
@@ -175,31 +212,23 @@ public class AudioManager : MonoBehaviour
         OnAudioSettingsChanged?.Invoke(_audioChannel.channelType, _audioChannel.CurrentVolume, _audioChannel.IsMuted);
     }
 
-    private void LoadSettings()
-    {
-        foreach (var _audioChannel in audioChannels)
-        {
-            _audioChannel.CurrentVolume = PlayerPrefs.GetFloat(_audioChannel.prefsVolumeKey, AudioChannelSettings.DEFAULT_VALUE);
-            _audioChannel.IsMuted = PlayerPrefs.GetInt(_audioChannel.prefsMuteKey, 1) == 0;
-        }
-    }
-
-    private void SaveSettings(AudioChannelSettings _audioChannel)
-    {
-        if (!_audioChannel.IsMuted)
-        {
-            PlayerPrefs.SetFloat(_audioChannel.prefsVolumeKey, _audioChannel.CurrentVolume);
-        }
-
-        PlayerPrefs.SetInt(_audioChannel.prefsMuteKey, _audioChannel.IsMuted ? 0 : 1);
-        PlayerPrefs.Save();
-    }
+    #endregion
 
     #region Music
 
     private AudioSource music_activeSource;
     private AudioSource music_inactiveSource;
     private Coroutine music_fadeRoutine;
+
+    private void InitializeMusicSources()
+    {
+        // Создаем два источника для плавного перекрестного затухания
+        music_activeSource = gameObject.AddComponent<AudioSource>();
+        music_activeSource.outputAudioMixerGroup = musicGroup;
+
+        music_inactiveSource = gameObject.AddComponent<AudioSource>();
+        music_inactiveSource.outputAudioMixerGroup = musicGroup;
+    }
 
     public void Music_Play(MusicAsset _musicAsset, float _fadeDuration = 1.5f)
     {
@@ -252,6 +281,52 @@ public class AudioManager : MonoBehaviour
 
     #endregion
 
+    #region SFX
+
+    private void InitializeSFXPool()
+    {
+        sfxPool = new List<AudioSource>();
+
+        if (sfxPoolSize < SFXPOOLSIZE_MIN)
+        {
+            Debug.LogError($"[AudioManager] CRITICAL ERROR: sfxPoolSize is less than {SFXPOOLSIZE_MIN}! Pool size fallback to the minimum allowed value: {SFXPOOLSIZE_MIN}");
+            sfxPoolSize = SFXPOOLSIZE_MIN;
+        }
+
+        for (int _i = 0; _i < sfxPoolSize; _i++)
+        {
+            // Создаем дочерний объект для каждого источника в пуле
+            GameObject _poolObject = new GameObject($"SFX_Source_{_i}");
+            _poolObject.transform.SetParent(transform);
+
+            AudioSource _source = _poolObject.AddComponent<AudioSource>();
+            _source.outputAudioMixerGroup = sfxGroup;
+            _source.playOnAwake = false;
+
+            sfxPool.Add(_source);
+        }
+    }
+
+    private AudioSource GetAvailableSFXSource()
+    {
+        // Пытаемся найти источник, который сейчас НИЧЕГО не играет
+        for (int _i = 0; _i < sfxPool.Count; _i++)
+        {
+            if (!sfxPool[_i].isPlaying)
+            {
+                return sfxPool[_i];
+            }
+        }
+
+        // Если все источники заняты (переполнение), берём источник по круговому индексу.
+        AudioSource _oldestSource = sfxPool[nextPoolIndex];
+
+        // Сдвигаем индекс на следующий элемент (если дошли до конца — сбрасываем в 0)
+        nextPoolIndex = (nextPoolIndex + 1) % sfxPoolSize; // Метод "Кольцевой буфер"
+
+        return _oldestSource;
+    }
+
     public void SFX_Play(SFXAsset _audioXAsset)
     {
         if (_audioXAsset == null)
@@ -266,4 +341,6 @@ public class AudioManager : MonoBehaviour
         // ScriptableObject (AudioEvent) проигрывает сам себя через sfxSource менеджера
         _audioXAsset.Play(_freeSource);
     }
+
+    #endregion
 }
