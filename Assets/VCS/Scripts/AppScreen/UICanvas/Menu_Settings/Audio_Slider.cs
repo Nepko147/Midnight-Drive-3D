@@ -3,14 +3,17 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
 
-public class Audio_Slider : MonoBehaviour, IPointerDownHandler, IDragHandler
+public class Audio_Slider : MonoBehaviour, IPointerDownHandler, IDragHandler, IEndDragHandler
 {
     [Header("Visualizer Link")]
     [SerializeField] private UI_FillSpriteVisualizer fillVisualizer;
 
-    // Событие, на которое подпишется контроллер настроек
+    // Событие изменения значения
     public event Action<float> OnValueChanged;
-    
+
+    // Событие, которое сработает когда отпускаем слайдер
+    public event Action OnDragEnded;
+
     private RectTransform rectTransform;
     private Image image;
     private float value;
@@ -37,7 +40,14 @@ public class Audio_Slider : MonoBehaviour, IPointerDownHandler, IDragHandler
     }
 
     public void OnPointerDown(PointerEventData _eventData) => HandleInput(_eventData);
+    
     public void OnDrag(PointerEventData _eventData) => HandleInput(_eventData);
+
+    public void OnEndDrag(PointerEventData _eventData)
+    {
+        // Оповещаем систему, что пользователь закончил настройку
+        OnDragEnded?.Invoke();
+    }
 
     private void HandleInput(PointerEventData _eventData)
     {

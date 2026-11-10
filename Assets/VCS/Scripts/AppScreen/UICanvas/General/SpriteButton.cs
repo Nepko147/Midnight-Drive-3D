@@ -36,8 +36,6 @@ public class SpriteButton : MonoBehaviour,
     
     #region Event
 
-    private UnityEvent onClick;
-
     // OnClick - Публичное свойство для презентера.
     // На случай, если метод OnEnable в презентере вызовется раньше Awake. 
     // Это свойство гарантированно найдет компонент и вернет его ивент без ошибок.
@@ -56,18 +54,9 @@ public class SpriteButton : MonoBehaviour,
 
     private Tween fadeTween;
 
-    public void AddListener(UnityAction _action)
-    {
-        // Инициализируем в Awake или проверяем на null, если подписка происходит раньше Awake
-        if (onClick == null)
-        {
-            onClick = GetComponent<Button>().onClick;
-        }
+    public void AddListener(UnityAction _action) => OnClick.AddListener(_action);
 
-        onClick.AddListener(_action);
-    }
-
-    public void RemoveListener(UnityAction _action) =>  onClick?.RemoveListener(_action);
+    public void RemoveListener(UnityAction _action) => OnClick.RemoveListener(_action);
 
     #endregion
 
@@ -107,11 +96,8 @@ public class SpriteButton : MonoBehaviour,
     {
         isPointerDown = false;
 
-        // Клик засчитывается, если курсор всё ещё над кнопкой
-        if (isPointerInside)
-        {
-            onClick?.Invoke();
-        }
+        // Если тут вызвать "OnClick.Invoke()", то произойдет дабл клик,
+        // т.к. при нажатии на кнопку, класс "Button" уже делает это автоматически.
 
         RecalculateState();
     }
@@ -205,7 +191,7 @@ public class SpriteButton : MonoBehaviour,
         image = GetComponent<Image>();
         rectTransform = GetComponent<RectTransform>();  
         
-        if (targetButton = null)
+        if (targetButton == null)
         {
             targetButton = GetComponent<Button>();
         }

@@ -16,6 +16,8 @@ public class Settings_Audio : MonoBehaviour
     // Из-за чего, в свою очередь возможна утечка памяти.
     // Решение: Кэшировать ссылку на менеджер при подписке.
 
+    private bool isSubscribed = false;
+
     private void OnEnable()
     {
         // Подписываемся на события UI
@@ -27,16 +29,17 @@ public class Settings_Audio : MonoBehaviour
         if (volumeSlider != null) 
         { 
             volumeSlider.OnValueChanged += OnSliderChanged;
+            volumeSlider.OnDragEnded += OnSliderDragEnded;
         }
 
         // Подписаться на менеджер
-        SubscribeToManager();
+        TrySubscribeToManager();
     }
 
     private void Start()
     {
-        // Гарантированный подписка при запуске
-        SubscribeToManager();
+        // Гарантированная подписка при запуске
+        TrySubscribeToManager();
     }
 
     private void OnDisable()
@@ -50,6 +53,7 @@ public class Settings_Audio : MonoBehaviour
         if (volumeSlider != null) 
         {
             volumeSlider.OnValueChanged -= OnSliderChanged;
+            volumeSlider.OnDragEnded -= OnSliderDragEnded;
         } 
 
         if (cachedAudioManager != null)
@@ -57,16 +61,20 @@ public class Settings_Audio : MonoBehaviour
             cachedAudioManager.OnAudioSettingsChanged -= OnManagerAudioSettingsChanged;
             cachedAudioManager = null; // Чистим кеш
         }
+
+        isSubscribed = false;
     }
 
-    private void SubscribeToManager()
+    private void TrySubscribeToManager()
     {
         // Подписывыемся на менеджер, только если он существует и если еще не подписались
         if (AudioManager.SingleOnScene != null
-            && cachedAudioManager == null)
+            && cachedAudioManager == null
+            && !isSubscribed)
         {
             cachedAudioManager = AudioManager.SingleOnScene;
             cachedAudioManager.OnAudioSettingsChanged += OnManagerAudioSettingsChanged;
+            isSubscribed = true;
 
             var _audioChannel = AudioManager.SingleOnScene.GetChannel(audioChannelType);
 
@@ -78,26 +86,11 @@ public class Settings_Audio : MonoBehaviour
         } 
     }
 
-    // Лямбды:
     private void OnSliderChanged(float _value) => cachedAudioManager?.SetVolumeFromUI(audioChannelType, _value);
+    
     private void OnMuteClicked() => cachedAudioManager?.ToggleMuteFromUI(audioChannelType);
 
-    // То же самое, но по классике:
-    //private void OnSliderChanged(float _value)
-    //{
-    //    if (cachedAudioManager != null)
-    //    {
-    //        cachedAudioManager.SetVolumeFromUI(audioChannelType, _value);
-    //    }
-    //}
-    //
-    //private void OnMuteClicked()
-    //{
-    //    if (cachedAudioManager != null)
-    //    {
-    //        cachedAudioManager.ToggleMuteFromUI(audioChannelType);
-    //    }   
-    //}
+    private void OnSliderDragEnded() => cachedAudioManager?.SaveAudioSettings();
 
     private void OnManagerAudioSettingsChanged(AudioChannelType _targetAudioChannel, float _volume, bool _isMuted)
     {

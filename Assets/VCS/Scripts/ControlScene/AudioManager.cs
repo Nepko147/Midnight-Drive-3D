@@ -69,9 +69,16 @@ public class AudioManager : MonoBehaviour, ISaveable
 
     private void Awake()
     {
-        if (SingleOnScene == null)
+        if (SingleOnScene == null) //Защита от дубликатов
         {
             SingleOnScene = this;
+        }
+    }
+
+    private void Start()
+    {
+        if (SingleOnScene == this) 
+        {
             DontDestroyOnLoad(gameObject);
 
             InitializeSFXPool(); // Инициализируем пул вместо одного источника
@@ -86,17 +93,10 @@ public class AudioManager : MonoBehaviour, ISaveable
         }
     }
 
-    private void Start()
-    {
-        foreach (var _audioChannel in audioChannels)
-        {
-            ApplyState(_audioChannel);
-        }
-    }
-
     private void OnDestroy()
     {
-        if (SingleOnScene != null && SingleOnScene == SaveManager.SingleOnScene)
+        if (SingleOnScene == this 
+            && SaveManager.SingleOnScene != null)
         {
             SaveManager.SingleOnScene.Unregister(this);
         }
@@ -179,7 +179,6 @@ public class AudioManager : MonoBehaviour, ISaveable
             _audioChannel.IsMuted = _audioChannel.CurrentVolume <= MUTE_THRESHOLD;
             
             ApplyState(_audioChannel);
-            SaveManager.SingleOnScene.SaveGame();
         }
     }
 
@@ -199,6 +198,15 @@ public class AudioManager : MonoBehaviour, ISaveable
             
             ApplyState(_audioChannel);
             SaveManager.SingleOnScene.SaveGame();
+        }
+    }
+
+    public void SaveAudioSettings()
+    {
+        if (SaveManager.SingleOnScene != null)
+        {
+            SaveManager.SingleOnScene.SaveGame();
+            Debug.Log("[AudioManager] Настройки звука успешно сохранены!");
         }
     }
 
@@ -309,22 +317,13 @@ public class AudioManager : MonoBehaviour, ISaveable
 
     private AudioSource GetAvailableSFXSource()
     {
-        // Пытаемся найти источник, который сейчас НИЧЕГО не играет
-        for (int _i = 0; _i < sfxPool.Count; _i++)
-        {
-            if (!sfxPool[_i].isPlaying)
-            {
-                return sfxPool[_i];
-            }
-        }
-
-        // Если все источники заняты (переполнение), берём источник по круговому индексу.
-        AudioSource _oldestSource = sfxPool[nextPoolIndex];
+        // Берём источник по круговому индексу.
+        AudioSource _source = sfxPool[nextPoolIndex];
 
         // Сдвигаем индекс на следующий элемент (если дошли до конца — сбрасываем в 0)
         nextPoolIndex = (nextPoolIndex + 1) % sfxPoolSize; // Метод "Кольцевой буфер"
 
-        return _oldestSource;
+        return _source;
     }
 
     public void SFX_Play(SFXAsset _audioXAsset)
