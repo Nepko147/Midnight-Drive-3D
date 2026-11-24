@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.EventSystems;
 using UnityEngine.Localization;
@@ -12,7 +13,7 @@ using DG.Tweening;
 [RequireComponent(typeof(Image))]
 [RequireComponent(typeof(Button))]
 
-public class SpriteButton : MonoBehaviour,
+public class UI_Button : MonoBehaviour,
     IPointerEnterHandler,
     IPointerExitHandler,
     IPointerDownHandler,
@@ -20,10 +21,6 @@ public class SpriteButton : MonoBehaviour,
 {
     [Header("Data")]   
     private ButtonVisualData visualData_current;
-
-    [Header("Audio")]
-    [SerializeField] private SFXAsset pointerEnterSound;
-    [SerializeField] private SFXAsset pointerDownSound;
     
     private RectTransform rectTransform;
     private Image image;
@@ -33,8 +30,12 @@ public class SpriteButton : MonoBehaviour,
     private bool isPointerDown;
    
     [SerializeField] private LocalizedAsset<ButtonVisualData> localizedAsset;
-    
+
     #region Event
+
+    // Внешние события для звука, аналитики или анимаций
+    public event Action OnPointerEntered;
+    public event Action OnPointerPressed;
 
     // OnClick - Публичное свойство для презентера.
     // На случай, если метод OnEnable в презентере вызовется раньше Awake. 
@@ -60,18 +61,17 @@ public class SpriteButton : MonoBehaviour,
 
     #endregion
 
-    #region Input
+    #region Input Handlers
     // Обработка ввода
     public void OnPointerEnter(PointerEventData _eventData)
     {
-        isPointerInside = true;
-
-        if (pointerEnterSound != null)
+        if (targetButton.interactable)
         {
-            AudioManager.SingleOnScene.SFX_Play(pointerEnterSound);
-        }
+            isPointerInside = true;
 
-        RecalculateState();
+            OnPointerEntered?.Invoke();
+            RecalculateState();
+        }
     }
 
     public void OnPointerExit(PointerEventData _eventData)
@@ -82,14 +82,13 @@ public class SpriteButton : MonoBehaviour,
 
     public void OnPointerDown(PointerEventData _eventData)
     {
-        isPointerDown = true;
-
-        if (pointerDownSound != null)
+        if (targetButton.interactable)
         {
-            AudioManager.SingleOnScene.SFX_Play(pointerDownSound);
-        }
+            isPointerDown = true;
 
-        RecalculateState();
+            OnPointerPressed?.Invoke();
+            RecalculateState();
+        }
     }
 
     public void OnPointerUp(PointerEventData _eventData)
@@ -123,6 +122,7 @@ public class SpriteButton : MonoBehaviour,
             {
                 var _halfDuratioon = visualData_current.TransitionDuration * 0.5f;
                 var _crossfadeSequence = DOTween.Sequence();
+
                 _crossfadeSequence.Append(image.DOFade(0f, _halfDuratioon).SetUpdate(true)) // Игнорируем Time.timeScale
                              .AppendCallback(() => image.sprite = _targetSprite)
                              .Append(image.DOFade(1f, _halfDuratioon).SetUpdate(true));
@@ -164,26 +164,37 @@ public class SpriteButton : MonoBehaviour,
         {
             visualData_current = _localizedValue;
 
-            var _newSprite = visualData_current.NormalSprite;
-            image.sprite = _newSprite;
+            var _currentSprite = GetSpriteForState(state);
+            image.sprite = _currentSprite;
 
-            if (_newSprite != null)
+            if (_currentSprite != null)
             {
-                rectTransform.sizeDelta = new Vector2(_newSprite.rect.width, _newSprite.rect.height);
+                rectTransform.sizeDelta = new Vector2(_currentSprite.rect.width, _currentSprite.rect.height);
             }
         }
     }
 
     private void OnEnable()
     {
-        // Подписываемся на событие смены языка
-        localizedAsset.AssetChanged += UpdateVisualData;
+        if (localizedAsset != null)
+        {
+            // Подписываемся на событие смены языка
+            localizedAsset.AssetChanged += UpdateVisualData;
+        }
     }
 
     private void OnDisable()
     {
-        localizedAsset.AssetChanged -= UpdateVisualData;
+        if (localizedAsset != null)
+        {
+            localizedAsset.AssetChanged -= UpdateVisualData;
+        }
+        
         fadeTween?.Kill();
+
+        isPointerInside = false;
+        isPointerDown = false;
+        state = ButtonState.Normal;
     }
 
     private void Awake()

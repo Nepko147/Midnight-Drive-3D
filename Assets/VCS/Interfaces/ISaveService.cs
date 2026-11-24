@@ -10,6 +10,7 @@ public interface ISaveService
     T Load<T>(string _key, T _defaultValue = default);
 
     void WriteRawText(string _key, string _text);
+    
     string ReadRawText(string _key);
 
     // Метод для удаления файла сохранения (пригодится для функции "Сброс прогресса")

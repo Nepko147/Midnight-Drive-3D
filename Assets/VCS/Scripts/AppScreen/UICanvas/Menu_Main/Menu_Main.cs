@@ -6,10 +6,10 @@ using UnityEngine;
 
 public class Menu_Main : MonoBehaviour
 {
-    [SerializeField] private SpriteButton playButton;
-    [SerializeField] private SpriteButton upgradesButton;
-    [SerializeField] private SpriteButton settingsButton;
-    [SerializeField] private SpriteButton quitButton;
+    [SerializeField] private UI_Button playButton;
+    [SerializeField] private UI_Button upgradesButton;
+    [SerializeField] private UI_Button settingsButton;
+    [SerializeField] private UI_Button quitButton;
 
     private void OnEnable()
     {   

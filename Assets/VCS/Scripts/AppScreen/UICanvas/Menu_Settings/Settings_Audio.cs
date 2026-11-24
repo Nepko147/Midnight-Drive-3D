@@ -1,4 +1,5 @@
 using UnityEngine;
+using VContainer;
 
 public class Settings_Audio : MonoBehaviour
 {
@@ -9,14 +10,20 @@ public class Settings_Audio : MonoBehaviour
     [SerializeField] private Audio_Button volumeButton;
     [SerializeField] private Audio_Slider volumeSlider;
     
-    private AudioManager cachedAudioManager; // Кэшированная ссылка AudioManager
+    private AudioManager audioManager; // Кэшированная ссылка AudioManager
     // В Unity при уничтожении сцены синглтон может очиститься раньше,
     // чем вызовется OnDisable обычного UI-элемента.
     // Из-за этого отписка (AudioManager.SingleOnScene -= ...) может не сработать.
     // Из-за чего, в свою очередь возможна утечка памяти.
     // Решение: Кэшировать ссылку на менеджер при подписке.
 
-    private bool isSubscribed = false;
+    //private bool isSubscribed = false;
+
+    [Inject]
+    public void Construct(AudioManager _audioManager)
+    {
+        audioManager = _audioManager;
+    }
 
     private void OnEnable()
     {
@@ -56,27 +63,20 @@ public class Settings_Audio : MonoBehaviour
             volumeSlider.OnDragEnded -= OnSliderDragEnded;
         } 
 
-        if (cachedAudioManager != null)
+        if (audioManager != null)
         {
-            cachedAudioManager.OnAudioSettingsChanged -= OnManagerAudioSettingsChanged;
-            cachedAudioManager = null; // Чистим кеш
+            audioManager.OnAudioSettingsChanged -= OnManagerAudioSettingsChanged;
         }
-
-        isSubscribed = false;
     }
 
     private void TrySubscribeToManager()
     {
         // Подписывыемся на менеджер, только если он существует и если еще не подписались
-        if (AudioManager.SingleOnScene != null
-            && cachedAudioManager == null
-            && !isSubscribed)
+        if (audioManager != null)
         {
-            cachedAudioManager = AudioManager.SingleOnScene;
-            cachedAudioManager.OnAudioSettingsChanged += OnManagerAudioSettingsChanged;
-            isSubscribed = true;
-
-            var _audioChannel = AudioManager.SingleOnScene.GetChannel(audioChannelType);
+            audioManager.OnAudioSettingsChanged += OnManagerAudioSettingsChanged;
+            
+            var _audioChannel = audioManager.GetChannel(audioChannelType);
 
             if (_audioChannel != null)
             {
@@ -86,11 +86,11 @@ public class Settings_Audio : MonoBehaviour
         } 
     }
 
-    private void OnSliderChanged(float _value) => cachedAudioManager?.SetVolumeFromUI(audioChannelType, _value);
+    private void OnSliderChanged(float _value) => audioManager?.SetVolumeFromUI(audioChannelType, _value);
     
-    private void OnMuteClicked() => cachedAudioManager?.ToggleMuteFromUI(audioChannelType);
+    private void OnMuteClicked() => audioManager?.ToggleMuteFromUI(audioChannelType);
 
-    private void OnSliderDragEnded() => cachedAudioManager?.SaveAudioSettings();
+    private void OnSliderDragEnded() => audioManager?.SaveAudioSettings();
 
     private void OnManagerAudioSettingsChanged(AudioChannelType _targetAudioChannel, float _volume, bool _isMuted)
     {

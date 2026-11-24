@@ -1,25 +1,15 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class SaveManager : MonoBehaviour
+public class SaveManager
 {
-    public static SaveManager SingleOnScene { get; private set; }
-
-    private ISaveService saveService;
+    private readonly ISaveService saveService;
     private readonly List<ISaveable> saveableComponents = new();
 
-    private void Awake()
+    // VContainer передает сюда нужную реализацию ISaveService (например, JsonSaveService)
+    public SaveManager(ISaveService _saveService)
     {
-        if (SingleOnScene == null)
-        {
-            SingleOnScene = this;
-            DontDestroyOnLoad(gameObject);
-            saveService = new JsonSaveService();
-        }
-        else
-        {
-            Destroy(gameObject);
-        }
+        saveService = _saveService;
     }
 
     public void Register(ISaveable _saveable)

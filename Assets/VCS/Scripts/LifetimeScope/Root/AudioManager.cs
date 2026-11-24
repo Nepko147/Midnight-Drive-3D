@@ -3,11 +3,10 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Audio;
+using VContainer;
 
 public class AudioManager : MonoBehaviour, ISaveable
 {
-    public static AudioManager SingleOnScene { get; private set; }
-
     [System.Serializable]
     public class AudioChannelSettings
     {
@@ -67,39 +66,32 @@ public class AudioManager : MonoBehaviour, ISaveable
 
     public string SaveKey => AUDIO_SAVE_KEY;
 
-    private void Awake()
+    private SaveManager saveManager;
+
+    [Inject]
+    public void Construct(SaveManager _saveManager)
     {
-        if (SingleOnScene == null) //Защита от дубликатов
-        {
-            SingleOnScene = this;
-        }
+        saveManager = _saveManager;
+
+        InitializeSFXPool();
+        InitializeMusicSources();
+        saveManager.Register(this);
     }
 
     private void Start()
     {
-        if (SingleOnScene == this) 
+        if (audioChannels != null)
         {
-            DontDestroyOnLoad(gameObject);
-
-            InitializeSFXPool(); // Инициализируем пул вместо одного источника
-            InitializeMusicSources(); // Инициализируем 1 источник (В текущем проекте пул не нужен)
-
-            SaveManager.SingleOnScene.Register(this);
-        }
-        else
-        {
-            Destroy(gameObject);
-            return;
+            foreach (var _channel in audioChannels)
+            {
+                ApplyState(_channel);
+            }
         }
     }
 
     private void OnDestroy()
     {
-        if (SingleOnScene == this 
-            && SaveManager.SingleOnScene != null)
-        {
-            SaveManager.SingleOnScene.Unregister(this);
-        }
+        saveManager?.Unregister(this);
     }
 
     // Собираем данные для универсального сейва
@@ -197,15 +189,15 @@ public class AudioManager : MonoBehaviour, ISaveable
             }
             
             ApplyState(_audioChannel);
-            SaveManager.SingleOnScene.SaveGame();
+            saveManager.SaveGame();
         }
     }
 
     public void SaveAudioSettings()
     {
-        if (SaveManager.SingleOnScene != null)
+        if (saveManager != null)
         {
-            SaveManager.SingleOnScene.SaveGame();
+            saveManager.SaveGame();
             Debug.Log("[AudioManager] Настройки звука успешно сохранены!");
         }
     }
